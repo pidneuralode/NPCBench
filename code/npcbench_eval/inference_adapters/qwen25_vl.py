@@ -142,7 +142,7 @@ class Qwen2_5_VL:
             for message in messages:
                 role = message["role"]
                 content = message["content"]
-                current_messages.append({"role":role,"content":[{"type":"text","text":content}]}) 
+                current_messages.append({"role":role,"content":[{"type":"text","text":content}]})
 
         else:
             prompt = messages["prompt"]
@@ -186,7 +186,7 @@ class Qwen2_5_VL:
                 content.append({"type":"text","text":messages["prompt"]})
                 current_messages.append({"role":"user","content":content})
             else:
-                current_messages.append({"role":"user","content":[{"type":"text","text":prompt}]}) 
+                current_messages.append({"role":"user","content":[{"type":"text","text":prompt}]})
 
         messages = current_messages
         prompt = self.processor.apply_chat_template(
@@ -231,7 +231,7 @@ class Qwen2_5_VL:
         llm_inputs = self.process_messages(messages)
         outputs = self.llm.generate([llm_inputs], sampling_params=self.sampling_params)
         return outputs[0].outputs[0].text
-    
+
     def generate_outputs(self,messages_list):
         llm_inputs_list = [self.process_messages(messages) for messages in messages_list]
         # from pdb import set_trace;set_trace()
