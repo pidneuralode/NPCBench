@@ -97,6 +97,9 @@ Configuration files expose the generation budget, context length and sampling
 settings. Use your own model paths and environment variables for API credentials;
 no server login or API key is included in this repository.
 
+The package also includes scoring helpers for MRI cine, short-answer questions
+and the history controls in the supplementary data.
+
 ## License and citation
 
 Code is [MIT licensed](LICENSE). Original benchmark data and annotations are
