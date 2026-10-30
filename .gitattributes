@@ -1,0 +1,2 @@
+# Preserve the frozen parser byte-for-byte, including upstream blank-line spaces.
+code/npcbench_eval/mcq_release_local_parser.py whitespace=-blank-at-eol

@@ -1,0 +1,18 @@
+{
+  "adapter": "qwen25_vl",
+  "model_label": "Lingshu-7B",
+  "tensor_parallel_size": 1,
+  "max_images": 10,
+  "max_model_len": 50000,
+  "max_new_tokens": 1024,
+  "temperature": 0.0,
+  "top_p": 0.0001,
+  "repetition_penalty": 1.0,
+  "gpu_memory_utilization": 0.65,
+  "kv_cache_memory_bytes": 8589934592,
+  "max_num_seqs": 1,
+  "max_num_batched_tokens": 8192,
+  "internvl_max_patches": 4,
+  "seed": 0,
+  "distributed_port": 59311
+}

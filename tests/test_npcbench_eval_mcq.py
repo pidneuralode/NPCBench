@@ -1,0 +1,73 @@
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+from npcbench_eval.mcq import load_mcq_dataset, parse_option_letter, score_mcq
+
+
+class TestNPCBenchMCQEval(unittest.TestCase):
+    def test_parse_option_letter_common_formats(self):
+        self.assertEqual(parse_option_letter(r"\boxed{C}", {"A", "B", "C"}), "C")
+        self.assertEqual(parse_option_letter("答案：B", {"A", "B", "C"}), "B")
+        self.assertEqual(parse_option_letter('{"answer": "A"}', {"A", "B", "C"}), "A")
+        self.assertIsNone(parse_option_letter("I cannot decide between A and B", {"A", "B", "C"}))
+
+    def test_l1_release_loads_and_scores_constant_answer(self):
+        data_path = Path(os.environ.get("NPCBENCH_TEST_DATA", ROOT / "data")) / "l1_guideline_memory" / "guidelinebench_base.json"
+        if not data_path.exists():
+            self.skipTest("Set NPCBENCH_TEST_DATA to run the full-dataset integration check")
+        items = load_mcq_dataset(data_path)
+        self.assertEqual(len(items), 250)
+        results, metrics = score_mcq(items, constant_answer="A")
+        self.assertEqual(len(results), 250)
+        self.assertEqual(metrics["total"], 250)
+        self.assertEqual(metrics["right"], 62)
+        self.assertAlmostEqual(metrics["acc"], 62 / 250)
+
+    def test_jsonl_mcq_response_file_schema(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            dataset = tmp_path / "toy.jsonl"
+            dataset.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "item_id": "q1",
+                                "patient_id": "p1",
+                                "question": "Choose.",
+                                "options": {"A": "alpha", "B": "beta"},
+                                "correct_option": "B",
+                            },
+                            ensure_ascii=False,
+                        ),
+                        json.dumps(
+                            {
+                                "item_id": "q2",
+                                "patient_id": "p1",
+                                "question": "Choose.",
+                                "options": {"A": "alpha", "B": "beta"},
+                                "correct_option": "A",
+                            },
+                            ensure_ascii=False,
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            items = load_mcq_dataset(dataset)
+            responses = {"q1": r"\boxed{B}", "q2": "答案：B"}
+            _, metrics = score_mcq(items, responses)
+            self.assertEqual(metrics["right"], 1)
+            self.assertAlmostEqual(metrics["acc"], 0.5)
+            self.assertAlmostEqual(metrics["patient_macro_acc"], 0.5)
+            self.assertAlmostEqual(metrics["patient_full_success"], 0.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
