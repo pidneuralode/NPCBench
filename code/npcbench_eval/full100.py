@@ -1,4 +1,9 @@
-"""Reproduce all Full100 model scores offline from frozen responses and gold labels."""
+"""Replay the historical Full100 archive (223 care nodes, legacy scoring).
+
+For the current 217-scored-node benchmark, use npcbench-l6 instead.
+This command requires the historical response archive, which is not included
+in the public benchmark-input download.
+"""
 import argparse
 from collections import Counter
 import csv

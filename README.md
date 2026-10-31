@@ -100,6 +100,20 @@ no server login or API key is included in this repository.
 The package also includes scoring helpers for MRI cine, short-answer questions
 and the history controls in the supplementary data.
 
+## Published results
+
+The public data match the paper's evaluated question sets: 250 L1, 185 L2 and
+165 L4 questions, and 100 Full100 patients with 217 scored care decisions.
+The commands above score new predictions. Complete historical model-response
+archives and figure inputs are not included in this release, so these downloads
+alone cannot replay every paper result. `scripts/reproduce_current_primary.py`
+requires the separately retained frozen result bundles and reference tables.
+Some original generation settings are also incomplete; the provided inference
+configurations should not be taken as a reconstruction of every historical run.
+
+Use `npcbench-l6` for the current Full100 protocol. `npcbench-full100` is only
+for the historical **223-node** archive and retains that archive's scoring rules.
+
 ## License and citation
 
 Code is [MIT licensed](LICENSE). Original benchmark data and annotations are

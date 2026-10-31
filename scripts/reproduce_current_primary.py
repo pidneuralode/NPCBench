@@ -4,6 +4,8 @@
 Historical bundle metrics stay unchanged. This command binds their raw outputs
 to final_answer_v1, retains O1's distinct judge contract, and checks the v6 table.
 It performs no model calls and needs no private patient map or source checkout.
+The required frozen result bundles and reference CSVs are retained separately;
+they are not included in the public benchmark-input download.
 """
 import argparse
 from collections import defaultdict
