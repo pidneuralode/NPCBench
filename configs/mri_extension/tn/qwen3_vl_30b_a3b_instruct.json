@@ -1,0 +1,23 @@
+{
+  "adapter": "qwen_vl",
+  "model_label": "Qwen3-VL-30B-A3B-Instruct",
+  "tensor_parallel_size": 2,
+  "max_model_len": 128000,
+  "max_images": 80,
+  "max_new_tokens": 8192,
+  "temperature": 0,
+  "top_p": 1.0,
+  "repetition_penalty": 1.0,
+  "gpu_memory_utilization": 0.98,
+  "kv_cache_memory_bytes": 37580963840,
+  "max_num_seqs": 256,
+  "max_num_batched_tokens": 16384,
+  "internvl_max_patches": 4,
+  "seed": 0,
+  "distributed_port": 54013,
+  "batch_inference": true,
+  "mm_processor_kwargs": {
+    "min_pixels": 65536,
+    "max_pixels": 1048576
+  }
+}

@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Dict, List
 
@@ -88,6 +89,8 @@ class InternVL:
             value = os.environ.get("VLLM_" + key.upper())
             if value is not None:
                 llm_kwargs[key] = int(value)
+        if os.environ.get("NPCBENCH_MM_PROCESSOR_KWARGS"):
+            llm_kwargs["mm_processor_kwargs"] = json.loads(os.environ["NPCBENCH_MM_PROCESSOR_KWARGS"])
         self.llm = LLM(**llm_kwargs)
         self.sampling_params = SamplingParams(
             temperature=args.temperature,

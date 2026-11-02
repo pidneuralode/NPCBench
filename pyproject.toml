@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "npcbench-eval"
-version = "0.2.0rc3"
+version = "0.2.0rc4"
 description = "NPCBench evaluation, local inference and frozen-result reproduction"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.10"
 dependencies = []
+
+[project.optional-dependencies]
+api = ["Pillow>=10"]
 
 [project.scripts]
 npcbench-o1 = "npcbench_eval.consultrubrics:main"
@@ -29,6 +32,8 @@ npcbench-l6 = "npcbench_eval.l6:main"
 npcbench-answer-audit = "npcbench_eval.answer_audit:main"
 npcbench-l5-rebuttal = "npcbench_eval.l5_rebuttal:main"
 npcbench-infer = "npcbench_eval.inference:main"
+npcbench-mri-extension = "npcbench_eval.mri_extension:main"
+npcbench-api-mri = "npcbench_eval.api_mri:main"
 
 [tool.setuptools.packages.find]
 where = ["code"]

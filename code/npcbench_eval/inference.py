@@ -1,6 +1,6 @@
 """Run archived local adapters from installed code and public relative-path inputs."""
 import argparse
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import hashlib
 import importlib
 import importlib.metadata
@@ -58,6 +58,10 @@ class Settings:
     internvl_max_patches: int = 4
     seed: int = 0
     distributed_port: int = 29500
+    batch_inference: bool = False
+    mm_processor_kwargs: dict = field(default_factory=dict)
+    hulu_merge_size: int = 0
+    hulu_visual_budget: int = 16384
 
     def __post_init__(self):
         if self.adapter not in ADAPTERS or not self.model_label:
@@ -96,10 +100,12 @@ def prepare_request(row, asset_root, settings, expected_hashes=None):
             raise ValueError('Image content differs from the public input manifest')
         assets.append({'path': relative, 'sha256': digest, 'bytes': path.stat().st_size})
         actual.append(str(path))
-    return {'sample_id': sid, 'id': sid, 'patient_id': row.get('patient_id'),
+    record = {'sample_id': sid, 'id': sid, 'patient_id': row.get('patient_id'),
             'stage': row.get('stage', row.get('task', 'generic')), 'prompt': row['prompt'],
             'prompt_sha256': hashlib.sha256(row['prompt'].encode()).hexdigest(), 'images': images,
-            'assets': assets}, {'prompt': row['prompt'], 'images': actual}
+            'assets': assets}
+    record.update({key: row[key] for key in ['input_condition', 'image_sampling'] if key in row})
+    return record, {'prompt': row['prompt'], 'images': actual}
 
 
 def choose_l6_patients(data, limit=None):
@@ -121,6 +127,17 @@ def choose_l6_patients(data, limit=None):
     result.update(contract=contract, hardcore=hard)
     validate_membership(result)
     return result
+
+
+def replace_mri_prompts(data, replacements):
+    indexed = {r['sample_id']: r for r in replacements}
+    if len(indexed) != len(replacements) or set(indexed) != {r['sample_id'] for r in data['mri']}:
+        raise ValueError('MRI prompt replacement must cover the same unique patients')
+    for row in data['mri']:
+        other = indexed[row['sample_id']]
+        if {k: v for k, v in row.items() if k != 'prompt'} != {k: v for k, v in other.items() if k != 'prompt'}:
+            raise ValueError('MRI prompt replacement cannot change labels, images or cohort fields')
+    return dict(data, mri=[indexed[r['sample_id']] for r in data['mri']])
 
 
 def care_requests(data, predictions):
@@ -188,7 +205,8 @@ def generate_one(model, actual, settings):
     grid = prepared.get('grid_sizes', [])
     if len(grid) != len(actual['images']):
         raise ValueError('HuluMed processor did not encode every input image')
-    trace = {'delivered_images': len(grid), 'tensor_shapes': {k: list(v.shape) for k, v in prepared.items() if isinstance(v, torch.Tensor)}}
+    trace = {'delivered_images': len(grid), 'tensor_shapes': {k: list(v.shape) for k, v in prepared.items() if isinstance(v, torch.Tensor)},
+             **getattr(model, 'last_media_trace', {})}
     kwargs = {'repetition_penalty': settings.repetition_penalty, 'max_new_tokens': settings.max_new_tokens,
               'do_sample': settings.temperature > 0}
     if settings.temperature > 0:
@@ -215,7 +233,10 @@ def run(args):
         raise ValueError('Use a new output directory; successful or truncated answers are never overwritten')
     expected_hashes, dataset = None, None
     if args.l6_inputs:
-        dataset = choose_l6_patients(load_dataset(root), args.patient_limit)
+        dataset = load_dataset(root)
+        if args.mri_prompts:
+            dataset = replace_mri_prompts(dataset, rows(args.mri_prompts))
+        dataset = choose_l6_patients(dataset, args.patient_limit)
         requested = [dict(r, stage=kind) for kind in ('pathology', 'mri') for r in dataset[kind]]
         expected_hashes = {r['path']: r['sha256'] for r in json.loads((root / 'file_manifest.json').read_text())}
     else:
@@ -233,8 +254,18 @@ def run(args):
         identity = checkpoint_identity(args.model_path.resolve())
         save(output / 'checkpoint_identity.json', identity)
         env = environment(settings)
+        if settings.mm_processor_kwargs:
+            env['NPCBENCH_MM_PROCESSOR_KWARGS'] = json.dumps(settings.mm_processor_kwargs)
+        else:
+            os.environ.pop('NPCBENCH_MM_PROCESSOR_KWARGS', None)
+        if settings.hulu_merge_size:
+            env.update(HULUMED_MERGE_SIZE=str(settings.hulu_merge_size),
+                       HULUMED_CONTEXT_LIMIT=str(settings.max_model_len),
+                       HULUMED_VISUAL_BUDGET=str(settings.hulu_visual_budget))
         os.environ.update(env)
         module_name, class_name = ADAPTERS[settings.adapter]
+        if settings.adapter == 'hulumed' and settings.hulu_merge_size:
+            module_name = 'hulumed_budget'
         module = importlib.import_module('.inference_adapters.' + module_name, __package__)
         runtime = {'settings': asdict(settings), 'python': sys.version, 'environment': env,
                    'packages': package_versions(), 'visible_devices': os.environ.get('CUDA_VISIBLE_DEVICES', 'all_visible'),
@@ -247,6 +278,10 @@ def run(args):
                    'scoring_policy': final_answer.POLICY if dataset else None,
                    'installed_package': 'site-packages' in Path(__file__).parts}
         save(output / 'run.json', runtime)
+        if args.mri_prompts:
+            runtime['mri_prompt_condition'] = 'Full25 output schema on all 100 MRI inputs'
+            runtime['mri_prompts_sha256'] = sha(args.mri_prompts)
+            save(output / 'run.json', runtime)
         import torch
         torch.manual_seed(settings.seed)
         state['status'] = 'loading_model'; state_save()
@@ -255,15 +290,25 @@ def run(args):
             top_p=settings.top_p, repetition_penalty=settings.repetition_penalty))
         predictions = []
         with (output / 'predictions.jsonl').open('w') as journal:
+            def emit(record, result):
+                result.update(record, model=settings.model_label, generation_status='ok')
+                journal.write(json.dumps(result, ensure_ascii=False) + '\n'); journal.flush()
+                predictions.append(result)
+                state['completed'] += 1; state_save()
+
             def generate(batch):
+                if settings.batch_inference and settings.adapter != 'hulumed':
+                    from .bounded_inference import vllm_batch
+                    state['status'] = 'running'; state_save()
+                    vllm_batch(model, batch, emit=emit, progress_path=output / 'generation.json')
+                    return
                 for record, actual in batch:
                     state['status'] = 'running'; state_save()
                     started = time.time()
+                    model.input_stage = record['stage']
                     result = generate_one(model, actual, settings)
-                    result.update(record, model=settings.model_label, generation_status='ok', elapsed_seconds=time.time() - started)
-                    journal.write(json.dumps(result, ensure_ascii=False) + '\n'); journal.flush()
-                    predictions.append(result)
-                    state['completed'] += 1; state_save()
+                    result['elapsed_seconds'] = time.time() - started
+                    emit(record, result)
             generate(prepared)
             if dataset:
                 generate([prepare_request(r, root, settings, expected_hashes) for r in care_requests(dataset, predictions)])
@@ -290,10 +335,11 @@ def main():
     source.add_argument('--l6-inputs', type=Path)
     parser.add_argument('--asset-root', type=Path)
     parser.add_argument('--patient-limit', type=int, help='Diagnostic first-N public patient IDs; never a Full100 score')
+    parser.add_argument('--mri-prompts', type=Path, help='Optional Full100 MRI prompt condition; labels and assets must match')
     parser.add_argument('--output-dir', type=Path, required=True)
     args = parser.parse_args()
-    if args.requests and (args.asset_root is None or args.patient_limit is not None):
-        parser.error('Explicit requests require --asset-root and do not accept --patient-limit')
+    if args.requests and (args.asset_root is None or args.patient_limit is not None or args.mri_prompts is not None):
+        parser.error('Explicit requests require --asset-root; Full100-only options do not apply')
     print(json.dumps(run(args), indent=2))
 
 

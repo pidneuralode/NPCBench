@@ -1,0 +1,24 @@
+{
+  "adapter": "internvl",
+  "model_label": "InternVL3.5-38B",
+  "tensor_parallel_size": 2,
+  "max_model_len": 40960,
+  "max_images": 10,
+  "max_new_tokens": 8192,
+  "temperature": 0,
+  "top_p": 1.0,
+  "repetition_penalty": 1.0,
+  "gpu_memory_utilization": 0.98,
+  "kv_cache_memory_bytes": 25769803776,
+  "max_num_seqs": 256,
+  "max_num_batched_tokens": 8192,
+  "internvl_max_patches": 4,
+  "seed": 0,
+  "distributed_port": 55821,
+  "batch_inference": true,
+  "mm_processor_kwargs": {
+    "crop_to_patches": true,
+    "min_patches": 1,
+    "max_patches": 12
+  }
+}

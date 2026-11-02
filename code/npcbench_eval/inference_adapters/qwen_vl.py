@@ -72,6 +72,8 @@ class Qwen35_36_MLLM:
                 llm_kwargs[key] = int(os.environ["VLLM_" + key.upper()])
         if os.environ.get("master_port"):
             llm_kwargs["master_port"] = int(os.environ["master_port"])
+        if os.environ.get("NPCBENCH_MM_PROCESSOR_KWARGS"):
+            llm_kwargs["mm_processor_kwargs"] = json.loads(os.environ["NPCBENCH_MM_PROCESSOR_KWARGS"])
         self.llm = LLM(**llm_kwargs)
 
         self.sampling_params = SamplingParams(

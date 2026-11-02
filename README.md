@@ -100,6 +100,13 @@ no server login or API key is included in this repository.
 The package also includes scoring helpers for MRI cine, short-answer questions
 and the history controls in the supplementary data.
 
+## MRI extension
+
+The current extension evaluates T300, N400 and a separate Full100 MRI prompt
+condition. See [MRI evaluation](docs/mri_extension.md) for model-specific image
+budgets, all 15 local-model profiles, API inference and T/N scoring. These runs
+are ongoing; their results do not replace the paper snapshot below.
+
 ## Published results
 
 The public data match the paper's evaluated question sets: 250 L1, 185 L2 and
