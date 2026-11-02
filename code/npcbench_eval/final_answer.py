@@ -159,12 +159,22 @@ def json_payload(response):
 
 
 def parse_t_stage(response):
+    return parse_stage_field(response, 'T')
+
+
+def parse_stage_field(response, stage):
     """Read the stage field, not T1-weighted images or thoracic vertebra names.
 
     A complete explicit field can be scored even if a later ancillary JSON
     field is incomplete. This preserves field-level rather than all-JSON
     correctness. Conflicting stage fields never receive a guessed value.
     """
+    if stage not in ('T', 'N'):
+        raise ValueError('Stage must be T or N')
+    allowed = {stage + str(i) for i in (range(1, 5) if stage == 'T' else range(4))}
+    lower = stage.lower()
+    keys = {stage + '_stage', lower + '_stage', stage + ' stage', lower + ' stage', stage, lower}
+    key_pattern = r'(?:' + '|'.join(re.escape(k) for k in sorted(keys, key=len, reverse=True)) + r')\b'
     channel = select_final(response)
     if channel.status != 'ok':
         return Answer('', False, channel.status, 'none', channel.method)
@@ -180,10 +190,10 @@ def parse_t_stage(response):
                 token, pos = decoder.raw_decode(text, pos)
             except ValueError:
                 break
-            if token in {'T_stage', 't_stage', 'T stage', 't stage', 'T', 't'}:
+            if token in keys:
                 key = token
         else:
-            match = re.match(r'(?:T_stage|t_stage|T stage|t stage|T|t)\b', text[pos:])
+            match = re.match(key_pattern, text[pos:])
             if match:
                 key, pos = match.group(), pos + match.end()
             else:
@@ -207,7 +217,7 @@ def parse_t_stage(response):
             value = value_match.group() if value_match else ''
             pos += len(value)
         value = re.sub(r'\s+', '', str(value)).upper()
-        if value in {'T1', 'T2', 'T3', 'T4'}:
+        if value in allowed:
             values.append(value)
         else:
             invalid_field = True
@@ -215,7 +225,7 @@ def parse_t_stage(response):
         return Answer('', False, 'invalid_stage_field', 'stage_field', channel.method, tuple(sorted(set(values))))
     if not values:
         direct = _clean(channel.text).upper().strip(' .。')
-        if direct in {'T1', 'T2', 'T3', 'T4'}:
+        if direct in allowed:
             values = [direct]
     unique = sorted(set(values))
     if len(unique) != 1:

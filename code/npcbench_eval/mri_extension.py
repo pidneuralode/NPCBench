@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import re
 
-from .final_answer import json_payload
+from .final_answer import parse_stage_field
 
 
 def uniform_indices(n, k):
@@ -76,10 +76,9 @@ def score(labels, predictions, stage):
         raise ValueError('Reference stage is outside the task categories')
     confusion, details = Counter(), []
     for sid, gold in refs.items():
-        payload, _, _ = json_payload(pred[sid].get('response') or '')
-        value = payload.get(field) if isinstance(payload, dict) else None
-        valid = isinstance(value, str) and value in allowed
-        value = value if valid else None
+        answer = parse_stage_field(pred[sid].get('response'), stage)
+        valid = answer.valid
+        value = answer.prediction if valid else None
         confusion[(gold, value or 'invalid')] += 1
         details.append({'id': sid, 'reference': gold, 'prediction': value,
                         'valid': valid, 'correct': value == gold})

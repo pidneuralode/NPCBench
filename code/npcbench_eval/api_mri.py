@@ -76,10 +76,9 @@ def make_messages(row, data_root, encoder):
 
 
 def parse_stage(response, field, json_parser):
-    payload, _, _ = json_parser(response or '')
-    value = payload.get(field) if isinstance(payload, dict) else None
-    allowed = {'N0', 'N1', 'N2', 'N3'} if field == 'n_stage' else {'T1', 'T2', 'T3', 'T4'}
-    return value if isinstance(value, str) and value in allowed else None
+    from .final_answer import parse_stage_field
+    answer = parse_stage_field(response, 'N' if field.lower() == 'n_stage' else 'T')
+    return answer.prediction if answer.valid else None
 
 
 def run_model(model, rows, args, secret, encoder, json_parser):

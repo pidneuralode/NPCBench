@@ -13,6 +13,19 @@ from npcbench_eval.mri_extension import prepare, score, select_groups
 
 
 class MRIExtensionTests(unittest.TestCase):
+    def test_stage_field_survives_truncated_evidence_without_guessing_a_category(self):
+        from npcbench_eval.final_answer import parse_stage_field
+        for value in ('N0', 'N1', 'N2', 'N3'):
+            answer = parse_stage_field('{"n_stage":"'+value+'","evidence":"unfinished', 'N')
+            self.assertTrue(answer.valid)
+            self.assertEqual(answer.prediction, value)
+        invalid = [None, '{"n_stage":"N3b"}', '{"n_stage":"N2","n_stage":"N3"}',
+                   '{"evidence":"example: \\"n_stage\\":\\"N2\\""}',
+                   '<think>{"n_stage":"N2"}', '{"n_stage":"N',
+                   '{"nested":{"n_stage":"N2"}}']
+        for text in invalid:
+            self.assertFalse(parse_stage_field(text, 'N').valid, repr(text))
+
     def test_exhausted_provider_budget_stops_without_retrying_or_lowering_claude_concurrency(self):
         from npcbench_eval.api_mri import run_model
         with tempfile.TemporaryDirectory() as name:
