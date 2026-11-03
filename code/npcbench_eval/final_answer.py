@@ -11,7 +11,7 @@ import unicodedata
 
 POLICY = 'final_answer_v1'
 _THINK = re.compile(r'<(/?)(think|thinking)>', re.I)
-_FINAL = re.compile(r'<\|channel\|>final<\|message\|>')
+_FINAL = re.compile(r'<\|channel\|>final\s*(?:<\|constrain\|>(?i:json))?<\|message\|>')
 _COMPACT = re.compile(r'assistant\s*final')
 _FINAL_HEADING = re.compile(r'^\s*#{1,6}\s*(?:Final Response|Final Answer|最终回答|最终答案)\s*[:：]?\s*$', re.I | re.M)
 _END = re.compile(r'<\|(?:im_end|eot_id|endoftext|return|fim_suffix|end)\|>')
