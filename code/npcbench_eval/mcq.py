@@ -8,6 +8,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .choice_sets import parse_choice_set
+
 
 @dataclass(frozen=True)
 class MCQItem:
@@ -90,8 +92,13 @@ def load_mcq_dataset(path: str | Path) -> list[MCQItem]:
             raise ValueError(f"{path}:{idx} is not an object")
         options = _clean_options(row.get("options"))
         answer = _answer_from_row(row)
-        if answer not in options:
+        multiple = row.get('question_type') == 'multiple_choice'
+        reference = parse_choice_set(answer, options) if multiple else None
+        valid_answer = reference.valid if multiple else answer in options
+        if not valid_answer:
             raise ValueError(f"{path}:{idx} answer {answer!r} is not in options")
+        if multiple:
+            answer = reference.prediction
         question = _question_from_row(row)
         if not question:
             raise ValueError(f"{path}:{idx} has empty question/prompt")
@@ -231,7 +238,11 @@ def score_mcq(
         status = "ok"
         if response is None:
             status = "missing_response"
-        pred = parse_option_letter(response, set(item.options)) if response is not None else None
+        if item.raw and item.raw.get('question_type') == 'multiple_choice' and response is not None:
+            parsed_set = parse_choice_set(response, item.options)
+            pred = parsed_set.prediction if parsed_set.valid else None
+        else:
+            pred = parse_option_letter(response, set(item.options)) if response is not None else None
         if response is not None and pred is None:
             status = "parse_failed"
         correct = bool(pred == item.answer) if pred is not None else False

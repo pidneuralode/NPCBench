@@ -47,6 +47,11 @@ npcbench-mcq-release --task L2 --parser final_answer_v1 \
 L1 uses item accuracy, L2 averages four capability groups, and L4 averages
 patient accuracies. Use these task-specific scores rather than a pooled accuracy.
 
+Questions marked `question_type: multiple_choice` require all applicable options.
+Return the complete set, for example `\boxed{C,D}`. Scoring compares unordered
+sets exactly; extra or missing choices receive no credit. Unmarked questions
+remain single-choice.
+
 For L3, use `Path`, `Seq`, `Struct` or `T-Stg`:
 
 ```sh
@@ -109,8 +114,10 @@ are ongoing; their results do not replace the paper snapshot below.
 
 ## Published results
 
-The public data match the paper's evaluated question sets: 250 L1, 185 L2 and
-165 L4 questions, and 100 Full100 patients with 217 scored care decisions.
+The current data contain 250 L1, 185 L2 and 165 L4 questions, and 100 Full100
+patients with 217 scored care decisions. The 3 November 2026 question revision
+retains those counts and updates clinical wording, selected answers and O1
+criteria. Results must identify the evaluated data revision.
 The commands above score new predictions. Complete historical model-response
 archives and figure inputs are not included in this release, so these downloads
 alone cannot replay every paper result. `scripts/reproduce_current_primary.py`

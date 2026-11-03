@@ -51,6 +51,21 @@ class FrozenMCQReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
             score(self.data, self.pred + [self.pred[0]], 'L1', 'api_mcq_v1')
 
+    def test_multiple_select_requires_the_entire_unordered_set(self):
+        row = dict(self.data[0], question_type='multiple_choice', answer='A+B')
+        for response, expected in [(r'\boxed{B,A}', True), (r'\boxed{A}', False),
+                                   (r'\boxed{A,B,C}', False), ('', False)]:
+            with self.subTest(response=response):
+                metrics, decisions = score([row], [{'id': row['id'], 'response': response}],
+                                           'L2', 'final_answer_v1')
+                self.assertEqual(decisions[0]['correct'], expected)
+                self.assertEqual(metrics['items'], 1)
+
+    def test_multiple_select_cannot_silently_use_a_single_choice_archive_parser(self):
+        row = dict(self.data[0], question_type='multiple_choice', answer='A+B')
+        with self.assertRaisesRegex(ValueError, 'require final_answer_v1'):
+            score([row], self.pred[:1], 'L2', 'api_mcq_v1')
+
     def test_incomplete_predictions_fail(self):
         with self.assertRaisesRegex(ValueError, 'exactly cover'):
             score(self.data, self.pred[:-1], 'L1', 'api_mcq_v1')

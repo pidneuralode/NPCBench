@@ -68,6 +68,19 @@ class TestNPCBenchMCQEval(unittest.TestCase):
             self.assertAlmostEqual(metrics["patient_macro_acc"], 0.5)
             self.assertAlmostEqual(metrics["patient_full_success"], 0.0)
 
+    def test_load_and_score_multiple_select_without_partial_credit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'multiple.jsonl'
+            path.write_text(json.dumps({'id': 'm1', 'question': 'Select all applicable.',
+                'question_type': 'multiple_choice', 'options': {'A': 'alpha', 'B': 'beta', 'C': 'gamma'},
+                'answer': 'A+C'}) + '\n')
+            items = load_mcq_dataset(path)
+            self.assertEqual(items[0].answer, 'A,C')
+            _, complete = score_mcq(items, {'m1': r'\boxed{C,A}'})
+            _, partial = score_mcq(items, {'m1': r'\boxed{A}'})
+            self.assertEqual(complete['right'], 1)
+            self.assertEqual(partial['right'], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

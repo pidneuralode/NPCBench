@@ -9,6 +9,7 @@ from pathlib import Path
 from . import mcq_release_api_parser as api_parser
 from . import mcq_release_local_parser as local_parser
 from .final_answer import POLICY, parse_choice
+from .choice_sets import parse_choice_set
 
 TASKS = {'L1': (250, 'G-Mem.', 'item_accuracy'),
          'L2': (185, 'A-App.', 'four_capability_group_macro'),
@@ -52,9 +53,17 @@ def score(dataset, predictions, task, parser):
     empty = 0
     for item_id, item in gold.items():
         response = raw[item_id].get('response') or ''
-        if not isinstance(response, str) or item['answer'] not in item['options']:
+        multiple = item.get('question_type') == 'multiple_choice'
+        reference = parse_choice_set(item['answer'], item['options']) if multiple else None
+        if not isinstance(response, str) or (not reference.valid if multiple else item['answer'] not in item['options']):
             raise ValueError('Invalid response type or gold option')
-        if parser == POLICY:
+        if multiple:
+            if parser != POLICY:
+                raise ValueError('Multiple-select questions require final_answer_v1')
+            parsed = parse_choice_set(response, item['options'])
+            pred, valid, method = parsed.prediction, parsed.valid, parsed.method
+            correct = valid and pred == reference.prediction
+        elif parser == POLICY:
             parsed = parse_choice(response, item['options'])
             pred, valid, method = parsed.prediction, parsed.valid, parsed.method
             correct = valid and pred == item['answer']
