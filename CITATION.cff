@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "Please cite the NPCBench paper when using the benchmark data or evaluation code."
 title: "NPCBench evaluation software"
 type: software
-version: "0.2.0rc3"
+version: "1.0.0"
 authors:
   - family-names: "Wang"
     given-names: "Pengkai"

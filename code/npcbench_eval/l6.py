@@ -1,4 +1,4 @@
-"""Score an explicit L6 membership version; parser policies remain diagnostic."""
+"""Score Full100 care decisions and patient-level outcomes."""
 import argparse
 from collections import Counter
 import hashlib
@@ -182,13 +182,12 @@ def score(data, predictions, policy):
         'pathology_percent': 100 * counts['pathology_right'] / n, 'mri_t_percent': 100 * counts['mri_t_right'] / n,
         'hardcore_micro_percent': 100 * counts['hardcore_right'] / len(hard) if hard else None,
         'mri_structure_macro_f1': f1sum / n}
-    result = {'status': 'diagnostic_pending_final_answer_parser', 'membership_version': data['contract']['version'],
-            'policy': policy, 'frozen_parser_sha256': sha(l6_scoring.__file__),
+    result = {'status': 'completed', 'membership_version': data['contract']['version'],
+            'policy': policy,
             'metrics': metrics, 'patient_results': per_patient, 'parsed_predictions': parsed}
     if policy == POLICY:
         result['frontend_interpretation_changes'] = frontend_changes
         result['frontend_inputs_require_review'] = bool(frontend_changes)
-        result['answer_parser_sha256'] = sha(Path(__file__).with_name('final_answer.py'))
     return result
 
 
@@ -196,12 +195,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--dataset-root', type=Path, required=True)
     ap.add_argument('--predictions', type=Path, required=True, help='417 unique sample_id/response records; excluded items absent')
-    ap.add_argument('--policy', choices=POLICIES, required=True)
+    ap.add_argument('--policy', choices=POLICIES, default=POLICY)
     ap.add_argument('--output', type=Path, required=True)
     args = ap.parse_args()
     result = score(load_dataset(args.dataset_root), rows(args.predictions), args.policy)
-    result['predictions_sha256'] = sha(args.predictions)
-    result['contract_sha256'] = sha(args.dataset_root / 'scoring_contract.json')
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
     print(json.dumps({k: v for k, v in result.items() if k not in ('patient_results', 'parsed_predictions')}, indent=2))

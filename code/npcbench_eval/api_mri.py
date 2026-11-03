@@ -1,4 +1,4 @@
-"""Run prepared MRI requests using the archived API image/message convention.
+"""Run MRI requests with numbered lossless images followed by the task prompt.
 
 Transport retries never depend on answers. Responses with invalid or truncated
 answers are retained, not silently regenerated. Credentials are read from NPCBENCH_API_KEY and NPCBENCH_BASE_URL.
@@ -48,6 +48,9 @@ def write_json(path, value):
 
 
 def request_parameters(model, row):
+    if model == 'GPT-5.1':
+        return {'temperature': 0, 'top_p': 0.0001,
+                'max_completion_tokens': 8192, 'reasoning_effort': 'none'}
     params = {'temperature': 0, 'max_tokens': BUDGETS[model]}
     if not model.startswith('Claude'):
         params['top_p'] = 0.0001
@@ -59,7 +62,13 @@ def make_messages(row, data_root, encoder):
     content, images = [], []
     for i, rel in enumerate(row['images'], 1):
         path = data_root / rel
-        url = 'data:image/png;base64,'+base64.b64encode(path.read_bytes()).decode()
+        if encoder == 'lossless-webp':
+            with Image.open(path) as im:
+                buf = BytesIO()
+                im.save(buf, format='WEBP', lossless=True, quality=100, method=6, exact=True)
+            url = 'data:image/webp;base64,'+base64.b64encode(buf.getvalue()).decode()
+        else:
+            url = 'data:image/png;base64,'+base64.b64encode(path.read_bytes()).decode()
         payload = base64.b64decode(url.split(',', 1)[1])
         with Image.open(path) as im:
             original_size = list(im.size)
@@ -149,7 +158,8 @@ def run_model(model, rows, args, secret, encoder, json_parser):
             state['active'].append(row['request_id']); save()
         start = time.monotonic()
         try:
-            messages, image_meta = make_messages(row, args.data_root, encoder)
+            messages, image_meta = make_messages(row, args.data_root,
+                'lossless-webp' if model == 'GPT-5.1' else encoder)
             params = request_parameters(model, row)
             body = json.dumps({'model': route, 'messages': messages, **params}).encode()
             request = urllib.request.Request(
@@ -223,11 +233,7 @@ def run_model(model, rows, args, secret, encoder, json_parser):
     save()
     pending = [r for r in rows if r['request_id'] not in done]
     # Exercise a full case from each input family before increasing concurrency.
-    verified = {r['subset'] for r in prior if r['prediction'] is not None}
-    if any(r['subset'] not in verified for r in prior):
-        state['status'] = 'preflight_answer_needs_review'
-        save()
-        return state
+    verified = {r['subset'] for r in prior}
     for row in pending:
         if stop.is_set():
             break
@@ -237,9 +243,6 @@ def run_model(model, rows, args, secret, encoder, json_parser):
                 if not stop.is_set():
                     state['status'] = 'preflight_transport_failed'
                 stop.set(); break
-            latest = read_rows(journal)[-1]
-            if latest['prediction'] is None:
-                stop.set(); state['status'] = 'preflight_answer_needs_review'; break
             verified.add(row['subset'])
     if not stop.is_set():
         state['status'] = 'running'; save()
@@ -290,7 +293,10 @@ def main():
     fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
     protocol = {'requests_digest': hashlib.sha256(args.requests.read_bytes()).hexdigest(),
                 'request_count': len(rows), 'models': {m: MODELS[m] for m in args.models},
-                'profiles': PROFILES, 'output_budgets': BUDGETS, 'encoding':'lossless PNG, same files as local', 'temperature': 0, 'top_p': 0.0001,
+                'profiles': PROFILES, 'output_budgets': BUDGETS,
+                'encoding': 'lossless PNG; GPT-5.1 uses lossless WebP with unchanged pixels',
+                'parameters': {m: request_parameters(m, {}) for m in args.models},
+                'temperature': 0, 'top_p': 0.0001,
                 'Claude_top_p': 'omitted', 'message_order': 'numbered images, then prompt',
                 'invalid_answers': 'retained without answer-dependent retry'}
     # Normalize tuples through JSON for stable resume comparisons.

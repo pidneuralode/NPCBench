@@ -11,7 +11,8 @@ import unicodedata
 
 POLICY = 'final_answer_v1'
 _THINK = re.compile(r'<(/?)(think|thinking)>', re.I)
-_FINAL = re.compile(r'<\|channel\|>final\s*(?:<\|constrain\|>(?i:json))?<\|message\|>')
+_FINAL = re.compile(r'<\|channel\|>final\s*(?:<\|constrain\|>[A-Za-z0-9_-]+\s*)?<\|message\|>')
+_ANALYSIS = re.compile(r'<\|channel\|>analysis\s*(?:<\|constrain\|>[A-Za-z0-9_-]+\s*)?<\|message\|>')
 _COMPACT = re.compile(r'assistant\s*final')
 _FINAL_HEADING = re.compile(r'^\s*#{1,6}\s*(?:Final Response|Final Answer|最终回答|最终答案)\s*[:：]?\s*$', re.I | re.M)
 _END = re.compile(r'<\|(?:im_end|eot_id|endoftext|return|fim_suffix|end)\|>')
@@ -59,7 +60,7 @@ def select_final(response):
         if len(matches) != 1:
             return Channel('', 'multiple_final_channels', 'explicit_final')
         text, method = text[matches[0].end():], 'explicit_final'
-    elif compact_analysis or '<|channel|>analysis<|message|>' in text:
+    elif compact_analysis or _ANALYSIS.search(text):
         return Channel('', 'unfinished_analysis_channel', 'analysis')
     elif re.match(r'^\s*#{1,6}\s*Thinking\s*$', text.splitlines()[0] if text.splitlines() else '', re.I):
         return Channel('', 'unfinished_markdown_reasoning', 'markdown_thinking')

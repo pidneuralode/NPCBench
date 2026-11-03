@@ -23,6 +23,16 @@ class FinalAnswerTests(unittest.TestCase):
         text = '<|channel|>analysis<|message|>A<|channel|>final<|message|>B<|return|>'
         self.assertEqual(self.prediction(text).prediction, 'B')
 
+    def test_harmony_format_metadata_does_not_change_the_final_channel(self):
+        for format_name in ('json', 'commentary'):
+            text = ('<|channel|>analysis<|message|>The provisional stage is T4.'
+                    '<|end|><|start|>assistant<|channel|>final <|constrain|>'
+                    + format_name + '<|message|>{"t_stage":"T1"}')
+            with self.subTest(format_name=format_name):
+                self.assertEqual(parse_t_stage(text).prediction, 'T1')
+        self.assertFalse(parse_t_stage('<|channel|>analysis <|constrain|>json'
+                                     '<|message|>{"t_stage":"T1"}').valid)
+
     def test_huatuo_markdown_final_ignores_different_thinking_answer(self):
         text = '## Thinking\nThe best answer is A.\n\n## Final Response\nB. second action'
         self.assertEqual(self.prediction(text).prediction, 'B')

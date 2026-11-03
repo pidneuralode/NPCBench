@@ -13,6 +13,36 @@ from npcbench_eval.mri_extension import prepare, score, select_groups
 
 
 class MRIExtensionTests(unittest.TestCase):
+    def test_stage_accuracy_preserves_class_and_input_format_denominators(self):
+        gold = ['T1', 'T2', 'T3', 'T3', 'T3', 'T4']
+        labels = [{'id': str(i), 't_stage': stage,
+                   'input_format': 'cards' if i < 2 else 'groups'} for i, stage in enumerate(gold)]
+        predictions = [{'id': str(i), 'response': '{"t_stage":"T3"}'} for i in range(6)]
+        result = score(labels, predictions, 'T')
+        self.assertEqual(result['accuracy'], .5)
+        self.assertEqual(result['balanced_accuracy'], .25)
+        self.assertEqual(result['by_input_format']['cards']['accuracy'], 0)
+        self.assertEqual(result['by_input_format']['groups']['accuracy'], .75)
+
+    def test_official_gpt51_parameters_and_lossless_image_pixels(self):
+        from npcbench_eval.api_mri import make_messages, request_parameters
+        from PIL import Image
+        params = request_parameters('GPT-5.1', {})
+        self.assertNotIn('max_tokens', params)
+        self.assertEqual(params['max_completion_tokens'], 8192)
+        self.assertEqual(params['reasoning_effort'], 'none')
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            original = Image.new('RGB', (5, 7), (80, 130, 190))
+            original.putpixel((2, 3), (19, 68, 145))
+            original.save(root/'image.png')
+            messages, metadata = make_messages({'images':['image.png'], 'prompt':'q',
+                'image_profile':'plane_groups_lossless_png_v1'}, root, 'lossless-webp')
+            url = messages[0]['content'][1]['image_url']['url']
+            decoded = Image.open(BytesIO(base64.b64decode(url.split(',')[1]))).convert('RGB')
+            self.assertEqual(decoded.size, original.size)
+            self.assertEqual(decoded.tobytes(), original.tobytes())
+
     def test_stage_field_survives_truncated_evidence_without_guessing_a_category(self):
         from npcbench_eval.final_answer import parse_stage_field
         for value in ('N0', 'N1', 'N2', 'N3'):

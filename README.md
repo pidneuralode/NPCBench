@@ -2,16 +2,52 @@
 
 **A Clinical Apprenticeship Benchmark for Multimodal Care-Pathway Reasoning in Nasopharyngeal Carcinoma**
 
-[Paper](https://openreview.net/forum?id=AVTJEREEah) · [Dataset on Hugging Face](https://huggingface.co/datasets/pengkaiScience/NPCBench)
+[Paper](https://openreview.net/forum?id=AVTJEREEah) · [Data](https://huggingface.co/datasets/pengkaiScience/NPCBench)
 
-NPCBench evaluates guideline knowledge, multimodal grounding, case planning,
-longitudinal revision, care-path reasoning and specialist consultation.
-This repository contains evaluation code and de-identified inference scripts.
-Download the benchmark data from Hugging Face.
+NPCBench asks whether models can connect guideline knowledge, image evidence and
+clinical decisions across a patient's care. It includes six task levels and an
+open-ended consultation task, evaluated across 30 models.
 
-## Installation
+![NPCBench overview](assets/overview.png)
 
-Python 3.10 or later:
+## Benchmark
+
+| Task | Evaluation set |
+|---|---|
+| L1 · Guideline memory | 250 questions |
+| L2 · Rule application | 185 questions |
+| L3 · Multimodal grounding | 69 pathology cases; 200 sequence questions; 2,700 structure cards; 400 T-stage and 400 N-stage cases |
+| L4 · Case planning | 165 questions from 84 patients |
+| L5 · Longitudinal revision | 305 decisions from 100 patients |
+| L6 · CarePath | 100 patients, 217 scored care decisions |
+| O1 · Consultation | 103 questions from 42 cases, 1,726 criteria |
+
+T and N cohorts are disjoint. The 100-patient anatomical panel is part of T400.
+Task cohorts overlap elsewhere, so these counts are not additive patient totals.
+Six L6 treatment questions are unscored pending clinical review.
+An independent T-stage panel contains 53 patients from Nanfang Hospital.
+
+## Results
+
+Scores are percentages; higher is better. Full100 joint success requires correct
+pathology and MRI T labels and every scored care decision for a patient.
+The [complete results](results/main_results.csv) cover all 30 models.
+[External-centre results](results/external_mri.csv) report the separate MRI panel.
+
+| Model | L2 | T400 | N400 | L5 turn | Full100 joint | O1 |
+|---|---:|---:|---:|---:|---:|---:|
+| GPT-5.1 | 80.9 | 27.2 | 32.8 | 75.7 | 2.0 | 58.4 |
+| GPT-4.1 | 77.6 | 39.8 | 22.0 | 78.7 | 2.0 | 33.3 |
+| Gemini-3.1-Pro-Preview | 92.5 | 31.0 | 38.5 | 87.9 | 11.0 | 47.8 |
+| Claude-Sonnet-4.6 | 86.1 | 33.5 | 27.3 | 85.2 | 23.0 | 47.5 |
+| Qwen3.6-35B-A3B | 67.9 | 43.5 | 20.2 | 76.1 | 5.0 | 42.4 |
+| Qwen3.6-27B | 71.4 | 37.5 | 42.8 | 79.7 | 5.0 | 47.2 |
+| Hulu-Med-32B | 74.5 | 29.0 | 20.0 | 70.2 | 10.0 | 7.6 |
+| GPT-OSS-120B | 75.4 | — | — | 60.3 | — | 44.9 |
+
+![Patient-level outcomes](assets/patient_outcomes.png)
+
+## Install and download
 
 ```sh
 git clone https://github.com/pidneuralode/NPCBench.git
@@ -19,117 +55,60 @@ cd NPCBench
 pip install .
 pip install huggingface_hub
 hf download pengkaiScience/NPCBench --repo-type dataset --local-dir data
-```
-
-For image-based tasks, extract the data archives:
-
-```sh
 tar -xzf data/L3/images_and_inputs.tar.gz -C data/L3
 tar -xzf data/L6/carepath.tar.gz -C data/L6
+for shard in data/L3/extensions/images-*.tar; do
+  tar -xf "$shard" -C data/L3/extensions
+done
 ```
 
-## Evaluation
+Python 3.10 or later is required. Install model-specific inference dependencies
+in the environment used for that model.
 
-Save predictions as JSONL, with one question ID and model response per row:
+## Score predictions
 
-```json
-{"id": "question_id", "response": "B"}
-```
-
-For L1, L2 and L4, use the matching task and question file:
+Save one JSONL row per question: `{"id":"question_id","response":"B"}`.
+L6 uses `sample_id` instead of `id`.
 
 ```sh
 npcbench-mcq-release --task L2 --parser final_answer_v1 \
   --dataset data/L2/questions.jsonl --predictions outputs/l2.jsonl \
   --output outputs/l2_scores.json
-```
-
-L1 uses item accuracy, L2 averages four capability groups, and L4 averages
-patient accuracies. Use these task-specific scores rather than a pooled accuracy.
-
-Questions marked `question_type: multiple_choice` require all applicable options.
-Return the complete set, for example `\boxed{C,D}`. Scoring compares unordered
-sets exactly; extra or missing choices receive no credit. Unmarked questions
-remain single-choice.
-
-For L3, use `Path`, `Seq`, `Struct` or `T-Stg`:
-
-```sh
-npcbench-l3 --subset T-Stg --dataset data/L3/T-Stg.jsonl \
-  --predictions outputs/mri.jsonl --output outputs/mri_scores.json
-```
-
-For L5:
-
-```sh
+npcbench-mri-extension score --stage T --labels data/L3/T400.jsonl \
+  --predictions outputs/t400.jsonl --output outputs/t400_scores.json
+npcbench-mri-extension score --stage N --labels data/L3/N400.jsonl \
+  --predictions outputs/n400.jsonl --output outputs/n400_scores.json
 npcbench-l5 --dataset data/L5/questions.jsonl \
   --predictions outputs/l5.jsonl --output outputs/l5_scores.json
-```
-
-For L6, predictions use `sample_id` instead of `id`:
-
-```sh
 npcbench-l6 --dataset-root data/L6/full100_inputs_scored217 \
-  --predictions outputs/l6.jsonl --policy final_answer_v1 \
-  --output outputs/l6_scores.json
+  --predictions outputs/l6.jsonl --output outputs/l6_scores.json
 ```
 
-L5 reports turn accuracy and all-turn patient correctness. L6 reports care-decision
-accuracy and joint correctness of pathology, MRI T stage and all selected care
-answers. Full100 contains 100 patients and 217 scored care decisions; six
-pending-review treatment questions are excluded from scoring.
+Use `--task L1` or `--task L4` for the other choice tasks. L2 averages four
+capability groups; L4 averages patient scores. Multiple-choice questions require
+the complete unordered option set, such as `\boxed{C,D}`. L5 reports both turn
+accuracy and all-turn patient success. MRI scoring includes class recall,
+balanced accuracy and T-stage results by input format.
 
-For open-ended consultation, `npcbench-o1 --help` provides the commands to
-prepare rubric tasks, generate answers, run a judge and aggregate rubric scores.
-See [the data card](https://huggingface.co/datasets/pengkaiScience/NPCBench)
-for rubric fields, cohorts and data limitations.
+`npcbench-l3 --help` covers pathology, sequence recognition and structure cards.
+`npcbench-o1 --help` covers consultation generation, criterion judging and score
+aggregation. The paper uses GPT-OSS-120B as the O1 judge.
 
-## Local model inference
+## Generate responses
 
-The installed runner supports Qwen-VL, InternVL and Hulu-Med adapters. Install
-the model's Transformers/vLLM environment separately. Example:
+See [MRI inference](docs/mri_extension.md) for image layouts, model-specific
+contexts, local configurations and API commands. The data include prompts and
+ordered image paths. Use the corresponding task prompt and model profile.
 
 ```sh
-CUDA_VISIBLE_DEVICES=0 npcbench-infer \
-  --config configs/inference/qwen35_9b.json \
-  --model-path /path/to/model \
-  --l6-inputs data/L6/full100_inputs_scored217 \
-  --output-dir outputs/qwen35_full100
+CUDA_VISIBLE_DEVICES=0,1 npcbench-infer \
+  --config configs/mri_extension/tn/qwen3_vl_8b_instruct.json \
+  --model-path /path/to/Qwen3-VL-8B-Instruct \
+  --requests data/L3/extensions/requests.jsonl \
+  --asset-root data/L3/extensions --output-dir outputs/qwen3vl
 ```
-
-Set `tensor_parallel_size` in the configuration when using multiple GPUs.
-Configuration files expose the generation budget, context length and sampling
-settings. Use your own model paths and environment variables for API credentials;
-no server login or API key is included in this repository.
-
-The package also includes scoring helpers for MRI cine, short-answer questions
-and the history controls in the supplementary data.
-
-## MRI extension
-
-The current extension evaluates T300, N400 and a separate Full100 MRI prompt
-condition. See [MRI evaluation](docs/mri_extension.md) for model-specific image
-budgets, all 15 local-model profiles, API inference and T/N scoring. These runs
-are ongoing; their results do not replace the paper snapshot below.
-
-## Published results
-
-The current data contain 250 L1, 185 L2 and 165 L4 questions, and 100 Full100
-patients with 217 scored care decisions. The 3 November 2026 question revision
-retains those counts and updates clinical wording, selected answers and O1
-criteria. Results must identify the evaluated data revision.
-The commands above score new predictions. Complete historical model-response
-archives and figure inputs are not included in this release, so these downloads
-alone cannot replay every paper result. `scripts/reproduce_current_primary.py`
-requires the separately retained frozen result bundles and reference tables.
-Some original generation settings are also incomplete; the provided inference
-configurations should not be taken as a reconstruction of every historical run.
-
-Use `npcbench-l6` for the current Full100 protocol. `npcbench-full100` is only
-for the historical **223-node** archive and retains that archive's scoring rules.
 
 ## License and citation
 
-Code is [MIT licensed](LICENSE). Original benchmark data and annotations are
-[CC BY 4.0](LICENSE-DATA.md); third-party materials retain their terms.
-Please cite the NPCBench paper using [CITATION.cff](CITATION.cff).
+Code: [MIT](LICENSE). Original data and annotations: [CC BY 4.0](LICENSE-DATA.md).
+Third-party materials retain their terms. Citation details are in [CITATION.cff](CITATION.cff).
