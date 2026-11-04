@@ -18,7 +18,10 @@ import time
 import urllib.error
 import urllib.request
 
-from PIL import Image
+try:
+    from PIL import Image
+except ModuleNotFoundError:
+    Image = None
 
 MODELS = {
     'GPT-5.1': 'gpt-5.1-2025-11-13',
@@ -35,6 +38,14 @@ PROFILES = {
     'L3_API_1MB_min512_high': (1.0, 20.0, 512, 4096),
     'Full100_API_0.35MB_min384_high': (0.35, 0.35, 384, 8192),
 }
+
+
+def open_image(path_or_buffer):
+    if Image is None:
+        raise ModuleNotFoundError(
+            "No module named 'PIL'. Install npcbench-eval[api] to process images."
+        )
+    return Image.open(path_or_buffer)
 
 
 def read_rows(path):
@@ -63,16 +74,16 @@ def make_messages(row, data_root, encoder):
     for i, rel in enumerate(row['images'], 1):
         path = data_root / rel
         if encoder == 'lossless-webp':
-            with Image.open(path) as im:
+            with open_image(path) as im:
                 buf = BytesIO()
                 im.save(buf, format='WEBP', lossless=True, quality=100, method=6, exact=True)
             url = 'data:image/webp;base64,'+base64.b64encode(buf.getvalue()).decode()
         else:
             url = 'data:image/png;base64,'+base64.b64encode(path.read_bytes()).decode()
         payload = base64.b64decode(url.split(',', 1)[1])
-        with Image.open(path) as im:
+        with open_image(path) as im:
             original_size = list(im.size)
-        with Image.open(BytesIO(payload)) as im:
+        with open_image(BytesIO(payload)) as im:
             encoded_size = list(im.size)
         images.append({'image': rel, 'original_size': original_size,
                        'encoded_size': encoded_size, 'encoded_bytes': len(payload)})

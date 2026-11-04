@@ -1,8 +1,27 @@
+import os
+import subprocess
+import sys
+import textwrap
 import unittest
 from npcbench_eval.claude_recovery import recover
 
 
 class ClaudeRecoveryTests(unittest.TestCase):
+    def test_module_imports_without_pillow(self):
+        env = dict(os.environ)
+        env['PYTHONPATH'] = os.pathsep.join(filter(None, [env.get('PYTHONPATH'), 'code']))
+        script = textwrap.dedent("""\
+            import builtins
+            real_import = builtins.__import__
+            def blocked_import(name, *args, **kwargs):
+                if name == "PIL" or name.startswith("PIL."):
+                    raise ModuleNotFoundError("No module named 'PIL'")
+                return real_import(name, *args, **kwargs)
+            builtins.__import__ = blocked_import
+            import npcbench_eval.claude_recovery
+        """)
+        subprocess.run([sys.executable, '-c', script], check=True, env=env, capture_output=True)
+
     def test_unsupported_explicit_stage_is_not_resampled(self):
         def send(*args):
             self.fail('An explicit answer must not be retried')
