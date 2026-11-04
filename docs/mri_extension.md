@@ -4,7 +4,7 @@ L3 evaluates T stage in 400 patients and N stage in a disjoint set of 400 patien
 using AJCC/UICC edition 8. T400 has two image formats: structure cards for 100
 patients and aligned sequence groups for 300 patients. N400 uses sequence groups.
 The 100-patient anatomical panel also supplies the structure-invasion diagnostics.
-Full100 is a separate care-path task and uses AJCC edition 9.
+MRI T staging in the 100-patient CarePath cohort uses AJCC edition 9.
 
 ## Images and prompts
 
@@ -54,10 +54,10 @@ allows up to 256 scheduled sequences and bounds CPU image preparation to 48
 unfinished patients in chunks of eight. The evaluated environment uses vLLM
 0.19.1, Transformers 5.6.0, PyTorch 2.10.0 and qwen-vl-utils 0.0.14.
 
-Full100 profiles are in `configs/mri_extension/full100/`. They use ten MRI pages
+CarePath profiles are in `configs/mri_extension/full100/`. They use ten MRI pages
 per patient. InternVL uses up to 12 patches per image. Hulu pathology uses spatial
 merge 1 and a 16,384 visual-token budget, separately from MRI. Use `--l6-inputs`
-with the extracted Full100 directory to construct care inputs from that model's
+with the extracted CarePath directory to construct care inputs from that model's
 image predictions.
 
 ## API models

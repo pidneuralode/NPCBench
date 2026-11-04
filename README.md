@@ -19,7 +19,7 @@ open-ended consultation task, evaluated across 30 models.
 | L3 · Multimodal grounding | 69 pathology cases; 200 sequence questions; 2,700 structure cards; 400 T-stage and 400 N-stage cases |
 | L4 · Case planning | 165 questions from 84 patients |
 | L5 · Longitudinal revision | 305 decisions from 100 patients |
-| L6 · CarePath | 100 patients, 217 scored care decisions |
+| L6 · CarePath | 100 patients, 417 scored tasks: 100 pathology, 100 MRI T, 217 care decisions |
 | O1 · Consultation | 103 questions from 42 cases, 1,726 criteria |
 
 T and N cohorts are disjoint. The 100-patient anatomical panel is part of T400.
@@ -29,18 +29,21 @@ An independent T-stage panel contains 53 patients from Nanfang Hospital.
 
 ## Results
 
-Scores are percentages; higher is better. Full100 joint success requires correct
+The CarePath cohort contains 100 patient episodes. Scores are percentages; higher
+is better. CarePath joint success requires correct
 pathology and MRI T labels and every scored care decision for a patient.
 The [complete results](results/main_results.csv) cover all 30 models.
 [External-centre results](results/external_mri.csv) report the separate MRI panel.
+[Physician calibration](results/physician_calibration.csv) reports agreement with
+specialist labels on two consultation panels.
 
-| Model | L2 | T400 | N400 | L5 turn | Full100 joint | O1 |
+| Model | L2 | T400 | N400 | L5 turn | CarePath joint | O1 |
 |---|---:|---:|---:|---:|---:|---:|
-| GPT-5.1 | 80.9 | 27.2 | 32.8 | 75.7 | 2.0 | 58.4 |
+| GPT-5.1 | 80.9 | 27.3 | 32.8 | 75.7 | 2.0 | 58.4 |
 | GPT-4.1 | 77.6 | 39.8 | 22.0 | 78.7 | 2.0 | 33.3 |
 | Gemini-3.1-Pro-Preview | 92.5 | 31.0 | 38.5 | 87.9 | 11.0 | 47.8 |
 | Claude-Sonnet-4.6 | 86.1 | 33.5 | 27.3 | 85.2 | 23.0 | 47.5 |
-| Qwen3.6-35B-A3B | 67.9 | 43.5 | 20.2 | 76.1 | 5.0 | 42.4 |
+| Qwen3.6-35B-A3B | 67.9 | 43.5 | 20.3 | 76.1 | 5.0 | 42.4 |
 | Qwen3.6-27B | 71.4 | 37.5 | 42.8 | 79.7 | 5.0 | 47.2 |
 | Hulu-Med-32B | 74.5 | 29.0 | 20.0 | 70.2 | 10.0 | 7.6 |
 | GPT-OSS-120B | 75.4 | — | — | 60.3 | — | 44.9 |
