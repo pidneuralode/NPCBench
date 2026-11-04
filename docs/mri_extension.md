@@ -14,7 +14,16 @@ Display tiles are 512×512 pixels; groups are 512×1644 or 512×1096 pixels.
 All selected groups enter one request. PDFs are used for clinical review;
 inference receives images.
 
-Download and extract the archives as shown in the [README](../README.md).
+Download the staging inputs from the dataset and extract the image archives.
+
+```sh
+hf download pengkaiScience/NPCBench --repo-type dataset --include 'L3/*' --local-dir data
+tar -xzf data/L3/images_and_inputs.tar.gz -C data/L3
+for shard in data/L3/extensions/images-*.tar; do
+  tar -xf "$shard" -C data/L3/extensions
+done
+```
+
 `L3/requests/T400.jsonl` and `N400.jsonl` provide complete per-patient image paths,
 relative to `L3/`. The group-format files below use paths relative to `L3/extensions/`:
 
@@ -30,16 +39,11 @@ image-format strata as well as their combined accuracy.
 
 Profiles for 15 local visual models are in `configs/mri_extension/tn/`.
 
-| Family | Context tokens | Group-image encoding |
-|---|---:|---|
-| Qwen, Lingshu, HealthGPT | 128,000 | All groups, model-specific processor |
-| Hulu-Med-4B | 128,000 | All groups; spatial merge 2, visual budget 98,304 |
-| Hulu-Med-7B/32B | 32,768 | All groups; spatial merge 4, visual budget 22,000 |
-| InternVL3.5-38B | 40,960 | 33–35 groups; dynamic cropping, at most four patches per group |
-
-Hulu processors receive HWC arrays. All profiles reserve 8,192 output tokens and
-use greedy decoding. Model-specific resizing, tiling and spatial merging are
-part of the evaluation settings.
+Qwen, Lingshu, HealthGPT and Hulu-Med-4B use a 128,000-token context. Hulu-Med-7B
+and 32B use 32,768 tokens. The profiles specify each processor's visual budget and
+spatial merge. InternVL3.5-38B uses a 40,960-token context and 33–35 groups with
+dynamic cropping and at most four patches per group. All profiles reserve 8,192
+output tokens and use greedy decoding. Hulu processors receive HWC arrays.
 
 ```sh
 CUDA_VISIBLE_DEVICES=0,1 npcbench-infer \
@@ -59,6 +63,15 @@ per patient. InternVL uses up to 12 patches per image. Hulu pathology uses spati
 merge 1 and a 16,384 visual-token budget, separately from MRI. Use `--l6-inputs`
 with the extracted CarePath directory to construct care inputs from that model's
 image predictions.
+
+```sh
+hf download pengkaiScience/NPCBench L6/carepath.tar.gz --repo-type dataset --local-dir data
+tar -xzf data/L6/carepath.tar.gz -C data/L6
+npcbench-l6 --dataset-root data/L6/full100_inputs_scored217 \
+  --predictions l6_predictions.jsonl --output l6_scores.json
+```
+
+Use `sample_id` and `response` in each CarePath prediction row.
 
 ## API models
 
@@ -92,6 +105,13 @@ npcbench-claude-recovery --requests data/L3/extensions/requests.jsonl \
 ```
 
 ## Scoring
+
+```sh
+npcbench-mri-extension score --stage T --labels data/L3/T400.jsonl \
+  --predictions t400_predictions.jsonl --output t400_scores.json
+```
+
+Use `--stage N` with `data/L3/N400.jsonl` for nodal staging.
 
 `npcbench-mri-extension score` reports stage accuracy, class recall, balanced
 accuracy, invalid counts and a confusion matrix. T400 also reports accuracy by

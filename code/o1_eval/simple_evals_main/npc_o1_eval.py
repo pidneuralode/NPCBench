@@ -362,30 +362,6 @@ def cmd_prepare(args: argparse.Namespace) -> None:
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
 
 
-def cmd_make_oracle_predictions(args: argparse.Namespace) -> None:
-    items = load_o1_items(args.data_path)
-    if args.num_examples is not None:
-        items = items[: args.num_examples]
-    rows = []
-    for item in items:
-        rows.append(
-            {
-                "item_id": item["item_id"],
-                "case_id": item["case_id"],
-                "patient_id": item["patient_id"],
-                "tag": item["tag"],
-                "tag_label": item["tag_label"],
-                "question_slot": item["question_slot"],
-                "model_name": args.model_name,
-                "prompt": render_generation_messages(item["case_input"], item["question"]),
-                "response": item.get("merged_score_answer", ""),
-                "generation_status": "oracle_from_merged_score_answer",
-            }
-        )
-    write_jsonl(args.output_path, rows)
-    print(f"wrote {len(rows)} oracle predictions to {args.output_path}")
-
-
 def cmd_generate_vllm(args: argparse.Namespace) -> None:
     _set_common_vllm_env(args)
     os.environ["REASONING"] = str(args.reasoning)
@@ -1363,13 +1339,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output_dir", required=True)
     p.add_argument("--num_examples", type=int)
     p.set_defaults(func=cmd_prepare)
-
-    p = sub.add_parser("make-oracle-predictions", help="Write reference-like predictions for scorer smoke tests")
-    p.add_argument("--data_path", default=DEFAULT_DATA_PATH)
-    p.add_argument("--output_path", required=True)
-    p.add_argument("--model_name", default="oracle_merged_score_answer")
-    p.add_argument("--num_examples", type=int)
-    p.set_defaults(func=cmd_make_oracle_predictions)
 
     p = sub.add_parser("generate-vllm", help="Generate O1 responses with a MedEvalKit vLLM model class")
     p.add_argument("--data_path", default=DEFAULT_DATA_PATH)

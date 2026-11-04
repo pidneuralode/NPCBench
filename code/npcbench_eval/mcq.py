@@ -309,7 +309,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="NPCBench MCQ metric-only evaluator.")
     parser.add_argument("--dataset", required=True, help="MCQ JSON/JSONL dataset path.")
     parser.add_argument("--responses-file", help="Frozen response JSON/JSONL file.")
-    parser.add_argument("--constant-answer", help="Use the same option letter for all items; useful for smoke tests.")
     parser.add_argument("--output-dir", help="Directory for results.json and metrics.json.")
     parser.add_argument("--validate-only", action="store_true", help="Only validate and summarize the dataset.")
     return parser
@@ -323,10 +322,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0
 
-    responses = _load_responses(args.responses_file) if args.responses_file else {}
-    if not responses and args.constant_answer is None:
-        raise SystemExit("Provide --responses-file, --constant-answer, or --validate-only")
-    results, metrics = score_mcq(items, responses, args.constant_answer)
+    if not args.responses_file:
+        raise SystemExit("Provide --responses-file or --validate-only")
+    responses = _load_responses(args.responses_file)
+    results, metrics = score_mcq(items, responses)
     metrics["dataset_summary"] = summary
     if args.output_dir:
         out_dir = Path(args.output_dir)
