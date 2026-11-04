@@ -325,6 +325,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.responses_file:
         raise SystemExit("Provide --responses-file or --validate-only")
     responses = _load_responses(args.responses_file)
+    if not responses:
+        raise SystemExit("Provide a nonempty --responses-file or --validate-only")
     results, metrics = score_mcq(items, responses)
     metrics["dataset_summary"] = summary
     if args.output_dir:
