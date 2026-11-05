@@ -18,7 +18,7 @@ from o1_eval.simple_evals_main.npc_o1_eval import (
 )
 
 
-DATA_PATH = Path(os.environ.get("NPCBENCH_TEST_DATA", ROOT / "data")) / "o1_consultrubrics" / "consultrubrics_v20260504_doctor_revised.jsonl"
+DATA_PATH = Path(os.environ.get("NPCBENCH_TEST_DATA", ROOT / "data")) / "O1" / "questions.jsonl"
 
 
 class TestNPCO1Eval(unittest.TestCase):
@@ -35,7 +35,7 @@ class TestNPCO1Eval(unittest.TestCase):
         positives = [row for row in self.rubric_items if row.scoring_effect == "positive"]
         majors = [row for row in self.rubric_items if row.scoring_effect == "major_penalty"]
         minors = [row for row in self.rubric_items if row.scoring_effect == "minor_penalty"]
-        self.assertEqual(len(positives), 1035)
+        self.assertEqual(len(positives), 1069)
         self.assertEqual(len(majors), 337)
         self.assertEqual(len(minors), 320)
         self.assertAlmostEqual(sum(row.points for row in positives), 1030.0)
