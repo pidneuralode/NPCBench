@@ -84,7 +84,9 @@ def reproduce(bundle):
         raise ValueError('Installed O1 scoring/schema version differs from the frozen bundle')
     items = rows(bundle / 'data/items.jsonl')
     rubrics = schema.flatten_dataset_rubrics(items)
-    if (len(items), len({r['case_id'] for r in items}), len(rubrics)) != (103, 42, 1692):
+    inventory = {'items': len(items), 'cases': len({r['case_id'] for r in items}),
+                 'rubrics': len(rubrics)}
+    if any(manifest[key] != count for key, count in inventory.items()):
         raise ValueError('O1 input inventory mismatch')
     rubric_map = {r.rubric_id: r for r in rubrics}
     models = {}
@@ -111,8 +113,9 @@ def reproduce(bundle):
         if result['metrics'] != entry['metrics'] or result['raw_judge_audit'] != entry['raw_judge_audit']:
             raise ValueError('Raw judgment CPU replay differs from the exported evidence')
         models[entry['model']] = {'metrics': result['metrics'], 'raw_judge_audit': result['raw_judge_audit']}
-    return {'verified': True, 'items': 103, 'cases': 42, 'rubrics': 1692, 'models': models,
-            'generation_rows': 3090, 'judgment_rows': judgment_rows, 'model_calls': 0}
+    return {'verified': True, **inventory, 'models': models,
+            'generation_rows': len(items) * len(models),
+            'judgment_rows': judgment_rows, 'model_calls': 0}
 
 
 def main():

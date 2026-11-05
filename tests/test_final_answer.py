@@ -42,6 +42,26 @@ class FinalAnswerTests(unittest.TestCase):
         self.assertEqual(self.prediction('<think>A</think><span style="color: #0000ff;">B</span>').prediction, 'B')
         self.assertEqual(self.prediction('<think>A</think><b>B</b>').prediction, 'B')
 
+    def test_fleming_xml_box_final(self):
+        for text in ('<think>A</think><boxed>B</boxed>',
+                     '<think>A</think><BOXED>B</boxed>'):
+            with self.subTest(text=text):
+                answer = self.prediction(text)
+                self.assertTrue(answer.valid)
+                self.assertEqual(answer.prediction, 'B')
+
+    def test_xml_box_conflicts_with_other_final_answers(self):
+        for text in ('<boxed>A</boxed>\\boxed{B}',
+                     '<boxed>A</boxed><answer>B</answer>'):
+            with self.subTest(text=text):
+                self.assertEqual(self.prediction(text).status, 'conflicting_answers')
+
+    def test_xml_box_must_be_complete_and_valid(self):
+        for text in ('<boxed>B', '<boxed>M</boxed>', '<boxed>B</answer>',
+                     '<boxed>A</boxed><boxed>B', '<think><boxed>B</boxed>'):
+            with self.subTest(text=text):
+                self.assertFalse(self.prediction(text).valid)
+
     def test_first_line_and_chinese_final_prose(self):
         self.assertEqual(self.prediction('B\n\nExplanation without other final answers.').prediction, 'B')
         self.assertEqual(self.prediction('最符合该策略的是选项 B：second action。').prediction, 'B')

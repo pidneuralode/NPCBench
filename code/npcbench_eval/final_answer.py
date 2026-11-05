@@ -310,13 +310,14 @@ def parse_choice(response, options):
         return Answer('', False, error, 'boxed', channel.method)
     for value in boxes:
         add(value, 'boxed')
-    for match in re.finditer(r'<answer>(.*?)</answer>', text, flags=re.I | re.S):
-        add(match.group(1), 'xml_answer')
+    xml_answer = re.compile(r'<(answer|boxed)>(.*?)</\1>', re.I | re.S)
+    for match in xml_answer.finditer(text):
+        add(match.group(2), 'xml_answer')
         spans.append(match.span())
     for match in re.finditer(r'<span\b[^>]*>(.*?)</span>', text, flags=re.I | re.S):
         add(match.group(1), 'html_span_answer')
         spans.append(match.span())
-    if re.search(r'<answer>', text, re.I) and not re.search(r'</answer>', text, re.I):
+    if re.search(r'</?(?:answer|boxed)>', xml_answer.sub('', text), re.I):
         malformed.append('xml_answer')
     declarations, prose = [], []
     for match in _MARKER.finditer(text):

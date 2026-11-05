@@ -31,7 +31,8 @@ covers archive extraction, T400/N400 scoring, and inference profiles. The data
 card describes CarePath inputs and the consultation rubrics.
 
 The [results directory](results/) includes staging, CarePath, external MRI,
-and physician agreement. CarePath joint success requires correct pathology, MRI
+physician agreement, and a CPU command to reproduce the main table from the
+released predictions. CarePath joint success requires correct pathology, MRI
 T stage, and every scored care decision for a patient.
 
 ## License and citation
