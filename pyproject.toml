@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "npcbench-eval"
-version = "1.1.0"
+version = "1.2.0"
 description = "Evaluation for NPCBench"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -18,4 +18,4 @@ npcbench = "npcbench_eval.cli:main"
 where = ["src"]
 
 [tool.setuptools]
-license-files = ["LICENSE", "LICENSE-DATA.md", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
+license-files = ["LICENSE"]

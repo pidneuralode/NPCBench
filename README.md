@@ -1,41 +1,44 @@
 # NPCBench
 
-NPCBench evaluates guideline knowledge, image interpretation, clinical decisions,
-and specialist consultation in nasopharyngeal carcinoma.
+Evaluation code for NPCBench. Use it to score L1–L6 choices and structured
+answers and to prepare and score O1 rubric judgments.
 
-[Paper](https://openreview.net/forum?id=AVTJEREEah) · [Dataset](https://huggingface.co/datasets/pengkaiScience/NPCBench) · [Results](results/main_results.csv)
+[Paper](https://openreview.net/forum?id=AVTJEREEah) · [Dataset](https://huggingface.co/datasets/pengkaiScience/NPCBench)
 
-Install with Python 3.10 or later and download the questions for your task.
+Install with Python 3.10 or later and download the inputs for your task.
 
-    pip install . huggingface_hub
-    hf download pengkaiScience/NPCBench L1/questions.jsonl --repo-type dataset --local-dir data
+```sh
+pip install . huggingface_hub
+hf download pengkaiScience/NPCBench L1/questions.jsonl O1/questions.jsonl --repo-type dataset --local-dir data
+```
 
 ## Choice and structured answers
 
-    npcbench choice --task L1 --predictions predictions.jsonl
+```sh
+npcbench choice --task L1 --predictions predictions.jsonl
+```
 
-Provide one JSONL record per question, with its id and response. For example,
-{"id":"question_id","response":"B"}. Return all selected letters for a
-multiple-select question. Use the structure and staging fields specified in
-the MRI prompts. L6 uses sample_id in place of id.
+Provide one JSONL record per question, such as `{"id":"question_id","response":"B"}`.
+Include all selected letters for questions with multiple correct options. For
+MRI tasks, follow the answer format in the prompt. Use `sample_id` for L6.
 
-Tasks are L1, L2, L3-Path, L3-Seq, L3-Struct, T400, N400, L4, L5, and L6.
-The dataset card describes image downloads. Add --output to save item scores.
+Task names are `L1`, `L2`, `L3-Path`, `L3-Seq`, `L3-Struct`, `T400`, `N400`,
+`L4`, `L5`, and `L6`. See the dataset card for image archives and task inputs.
+Use `--output scores.json` to save scores.
 
-## Open answers
+## O1 open answers
 
-For O1, download `O1/questions.jsonl` and use `item_id` to identify each response.
-Use `npcbench_eval.prompts.render_generation_messages` to format inputs as in
-the paper. Prepare one request per rubric criterion, run those requests with your judge,
-and return item_id, rubric_id, and a Boolean criteria_met for each judgment.
+Provide one JSONL record per consultation with `item_id` and `response`. To
+format generation inputs as in the paper, use
+`npcbench_eval.prompts.render_generation_messages`.
 
-    npcbench open --responses responses.jsonl --output judge_requests.jsonl
-    npcbench open --judgments judgments.jsonl --output scores.json
+```sh
+npcbench open --responses responses.jsonl --output judge_requests.jsonl
+npcbench open --judgments judgments.jsonl --output scores.json
+```
 
-For L1 short answers, download supplementary/option_free/answers.jsonl and run
-npcbench open --task L1-open --responses responses.jsonl. Use the JSON answer
-format in the task prompt. This command reports the rule-based slot score.
+Run the judge requests with your judge. Each judgment must include `item_id`,
+`rubric_id`, and a Boolean `criteria_met`.
 
-See [Results](results/README.md) to reproduce the paper's main table.
-Code is [MIT](LICENSE), and original data and annotations are [CC BY 4.0](LICENSE-DATA.md).
-Please cite the paper using [CITATION.cff](CITATION.cff).
+Code is [MIT](LICENSE). See the [dataset license](https://huggingface.co/datasets/pengkaiScience/NPCBench/blob/main/LICENSE-DATA.md)
+for data terms. Please cite the NPCBench paper.

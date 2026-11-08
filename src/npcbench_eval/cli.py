@@ -39,11 +39,6 @@ def choice(args):
 
 
 def open_task(args):
-    if args.task == 'L1-open':
-        if args.responses is None:
-            raise ValueError('L1-open requires --responses')
-        return open_response.score_short_answers(rows(args.data / 'supplementary/option_free/answers.jsonl'),
-                                                 rows(args.responses))
     items = rubrics.load_o1_items(args.data / 'O1/questions.jsonl')
     if args.judgments:
         return open_response.score_consultations(items, rows(args.judgments))
@@ -60,8 +55,8 @@ def main(argv=None):
     mcq = sub.add_parser('choice', help='score choices and structured MRI answers')
     mcq.add_argument('--task', choices=CHOICE_TASKS, required=True)
     mcq.add_argument('--predictions', type=Path, required=True)
-    written = sub.add_parser('open', help='prepare rubric judgments or score open answers')
-    written.add_argument('--task', choices=('O1', 'L1-open'), default='O1')
+    written = sub.add_parser('open', help='prepare rubric judgments or score O1 answers')
+    written.add_argument('--task', choices=('O1',), default='O1')
     inputs = written.add_mutually_exclusive_group(required=True)
     inputs.add_argument('--responses', type=Path)
     inputs.add_argument('--judgments', type=Path)

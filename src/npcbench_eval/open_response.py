@@ -5,7 +5,6 @@ from .multiple_choice import unique
 from .prompts import render_judge_messages
 from .rubrics import flatten_dataset_rubrics
 from .rubric_score import score_dataset
-from .short_answers import align_answer_components, extract_answer, score_slot
 
 
 def judge_requests(items, responses):
@@ -42,27 +41,3 @@ def score_consultations(items, judgments):
                        'explanation': obj.get('explanation', '') if obj else ''})
     details, metrics = score_dataset(items, rubrics, parsed)
     return {'metrics': metrics, 'items': details}
-
-
-def score_short_answers(items, responses):
-    questions = unique(items, 'item_id')
-    answers = unique(responses, 'item_id')
-    if not questions or questions.keys() != answers.keys():
-        raise ValueError('Provide one response for each short-answer question')
-    details = []
-    for key, item in questions.items():
-        raw = answers[key].get('response')
-        if raw is not None and not isinstance(raw, str):
-            raise ValueError('Response must be text or null')
-        parsed, _, _ = json_payload(raw or '')
-        answer = extract_answer({'parsed_response': parsed})
-        parts, alignment = align_answer_components(answer, item['response_count'])
-        for index, slot in enumerate(item['answer_slots']):
-            text = parts[index] if index < len(parts) else ''
-            correct = bool(text and score_slot(text, slot)['correct'])
-            details.append({'item_id': key, 'slot_id': slot['slot_id'], 'correct': correct,
-                            'alignment': alignment})
-    correct = sum(row['correct'] for row in details)
-    metrics = {'questions': len(questions), 'slots': len(details), 'correct_slots': correct,
-               'slot_accuracy': correct / len(details)}
-    return {'metrics': metrics, 'slots': details}
