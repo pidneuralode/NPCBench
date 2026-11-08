@@ -10,7 +10,7 @@ download the dataset's text files:
 python -m pip install . huggingface_hub
 hf download pengkaiScience/NPCBench --repo-type dataset --local-dir data \
   --include '*.json' '*.jsonl'
-python scripts/reproduce_main_results.py --data data --output reproduced_results.csv
+python reproduce.py --data data --output reproduced_results.csv
 ```
 
 The script checks all 327 reported scores. Image archives are not needed for

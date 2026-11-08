@@ -1,1 +1,0 @@
-"""Packaged ConsultRubrics evaluation implementation."""

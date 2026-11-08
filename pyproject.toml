@@ -4,41 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "npcbench-eval"
-version = "1.0.0"
-description = "NPCBench evaluation and multimodal inference"
+version = "1.1.0"
+description = "Evaluation for NPCBench"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.10"
 dependencies = []
 
-[project.optional-dependencies]
-api = ["Pillow>=10"]
-
 [project.scripts]
-npcbench-o1 = "npcbench_eval.consultrubrics:main"
-npcbench-mcq = "npcbench_eval.mcq:main"
-npcbench-full100 = "npcbench_eval.full100:main"
-npcbench-export-full100 = "npcbench_eval.export_full100:main"
-npcbench-l5 = "npcbench_eval.l5:main"
-npcbench-export-l5 = "npcbench_eval.export_l5:main"
-npcbench-l3 = "npcbench_eval.l3:main"
-npcbench-mcq-release = "npcbench_eval.mcq_release:main"
-npcbench-export-mcq-release = "npcbench_eval.export_mcq_release:main"
-npcbench-o1-release = "npcbench_eval.o1_release:main"
-npcbench-export-o1-release = "npcbench_eval.export_o1_release:main"
-npcbench-l3-assets = "npcbench_eval.export_l3_assets:main"
-npcbench-channel-audit = "npcbench_eval.channel_audit:main"
-npcbench-l6 = "npcbench_eval.l6:main"
-npcbench-answer-audit = "npcbench_eval.answer_audit:main"
-npcbench-l5-rebuttal = "npcbench_eval.l5_rebuttal:main"
-npcbench-infer = "npcbench_eval.inference:main"
-npcbench-mri-extension = "npcbench_eval.mri_extension:main"
-npcbench-api-mri = "npcbench_eval.api_mri:main"
-npcbench-claude-recovery = "npcbench_eval.claude_recovery:main"
+npcbench = "npcbench_eval.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["code"]
-include = ["npcbench_eval*", "o1_eval*"]
+where = ["src"]
 
 [tool.setuptools]
 license-files = ["LICENSE", "LICENSE-DATA.md", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
